@@ -1,0 +1,6 @@
+{
+  "name": "Hash Table Simulator",
+  "description": "Educational tool visualizing hashing and collision resolution techniques.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
