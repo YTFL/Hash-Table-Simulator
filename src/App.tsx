@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, StepForward, RotateCcw, Hash } from 'lucide-react';
+import { RotateCcw, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Algorithm, TableState, AnimationFrame, LogEntry } from './lib/types';
 import { initializeTable, simulateOperation } from './lib/simulator';
@@ -13,6 +13,7 @@ export default function App() {
   const [activeTarget, setActiveTarget] = useState<{ index: number; chainIndex?: number } | null>(null);
   const [status, setStatus] = useState<'probing' | 'success' | 'error' | 'idle'>('idle');
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   
   // Playback execution state
   const [playbackState, setPlaybackState] = useState<'idle' | 'playing' | 'paused'>('idle');
@@ -62,6 +63,7 @@ export default function App() {
     setPlaybackState('idle');
     setFrames([]);
     setFrameIndex(0);
+    setActiveNoteId(null);
   };
 
   const addLog = (log: LogEntry) => {
@@ -114,23 +116,6 @@ export default function App() {
     }
   };
 
-  const handleNextStep = () => {
-    if (playbackState !== 'paused' || frames.length === 0) return;
-    if (frameIndex < frames.length - 1) {
-      const nextIdx = frameIndex + 1;
-      const frame = frames[nextIdx];
-      setTable(frame.table);
-      setActiveTarget(frame.activeTarget);
-      setStatus(frame.status);
-      addLog(frame.log);
-      setFrameIndex(nextIdx);
-      
-      if (nextIdx === frames.length - 1) {
-        finishExecution();
-      }
-    }
-  };
-
   return (
     <div className="bg-slate-900 text-slate-200 font-sans h-screen w-full flex flex-col overflow-hidden">
       {/* Header */}
@@ -139,7 +124,7 @@ export default function App() {
           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center">
             <Hash className="w-5 h-5 text-slate-950" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">HashViz <span className="text-slate-500 font-normal">v1.0</span></h1>
+          <h1 className="text-xl font-bold tracking-tight text-white">HashViz</h1>
         </div>
         
         <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
@@ -160,124 +145,94 @@ export default function App() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
         
         {/* Sidebar: Controls */}
-        <aside className="col-span-3 border-r border-slate-700 bg-slate-900/50 p-6 flex flex-col space-y-6 overflow-y-auto">
-          <div className="space-y-4">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Table Configuration</label>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Table Size (N)</span>
-                <span className="text-xs font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{tableSize}</span>
-              </div>
-              <input 
-                type="range" 
-                className="w-full accent-cyan-500" 
-                min="3" max="50" 
-                value={tableSize}
-                onChange={(e) => setTableSize(Math.max(3, parseInt(e.target.value) || 10))}
-                disabled={playbackState !== 'idle'}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</label>
-            <div className="space-y-3">
-              <div className="relative">
+        <aside className="col-span-3 border-r border-slate-700 bg-slate-900/50 p-6 flex flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 space-y-6">
+            <div className="space-y-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Table Configuration</label>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Table Size (N)</span>
+                  <span className="text-xs font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{tableSize}</span>
+                </div>
                 <input 
-                  type="number" 
-                  placeholder="Enter Key (e.g. 42)" 
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  type="range" 
+                  className="w-full accent-cyan-500" 
+                  min="3" max="50" 
+                  value={tableSize}
+                  onChange={(e) => setTableSize(Math.max(3, parseInt(e.target.value) || 10))}
                   disabled={playbackState !== 'idle'}
-                  onKeyDown={(e) => {
-                     if(e.key === 'Enter' && playbackState === 'idle') runOperation('insert');
-                  }}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors disabled:opacity-50" 
                 />
-                <span className="absolute right-3 top-3 text-slate-600 text-xs py-1 px-2 border border-slate-800 rounded">INT</span>
               </div>
-              <div className="grid grid-cols-1 gap-2">
-                <button 
-                  onClick={() => runOperation('insert')} 
-                  disabled={playbackState !== 'idle'}
-                  className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Insert Key
-                </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => runOperation('search')}
-                    disabled={playbackState !== 'idle'}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Search
-                  </button>
-                  <button 
-                    onClick={() => runOperation('delete')}
-                    disabled={playbackState !== 'idle'}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+            </div>
 
-              {/* Execution Controls */}
-              <div className="pt-4 mt-2 border-t border-slate-800">
-                <div className="flex justify-between items-center mb-3">
-                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Execution Control</label>
-                   {playbackState !== 'idle' && frames.length > 0 && (
-                     <span className="text-[10px] font-mono text-cyan-500 bg-cyan-900/30 px-1.5 py-0.5 rounded border border-cyan-800/50 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
-                       Step {frameIndex + 1}/{frames.length}
-                     </span>
-                   )}
+            <div className="space-y-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Operations</label>
+              <div className="space-y-3">
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    placeholder="Enter Key (e.g. 42)" 
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    disabled={playbackState !== 'idle'}
+                    onKeyDown={(e) => {
+                       if(e.key === 'Enter' && playbackState === 'idle') runOperation('insert');
+                    }}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors disabled:opacity-50" 
+                  />
+                  <span className="absolute right-3 top-3 text-slate-600 text-xs py-1 px-2 border border-slate-800 rounded">INT</span>
                 </div>
-                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-700">
+                <div className="grid grid-cols-1 gap-2">
                   <button 
-                    onClick={() => setPlaybackState(prev => prev === 'playing' ? 'paused' : 'playing')}
-                    disabled={playbackState === 'idle'}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md transition-all ${
-                      playbackState === 'idle' 
-                        ? 'text-slate-600 disabled:opacity-50' 
-                        : playbackState === 'playing' 
-                          ? 'bg-amber-600/20 text-amber-500 hover:bg-amber-600/30' 
-                          : 'bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/30'
-                    }`}
+                    onClick={() => runOperation('insert')} 
+                    disabled={playbackState !== 'idle'}
+                    className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {playbackState === 'playing' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    <span className="text-sm font-semibold">{playbackState === 'playing' ? 'Pause' : 'Play'}</span>
+                    Insert Key
                   </button>
-                  <button 
-                    onClick={handleNextStep}
-                    disabled={playbackState !== 'paused'}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md transition-all ${
-                      playbackState === 'paused' 
-                        ? 'bg-slate-800 text-cyan-400 hover:bg-slate-700 shadow-md' 
-                        : 'text-slate-600 opacity-50'
-                    }`}
-                  >
-                    <StepForward className="w-4 h-4" />
-                    <span className="text-sm font-semibold">Step</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => runOperation('search')}
+                      disabled={playbackState !== 'idle'}
+                      className="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Search
+                    </button>
+                    <button 
+                      onClick={() => runOperation('delete')}
+                      disabled={playbackState !== 'idle'}
+                      className="py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
+
               </div>
-              
+            </div>
+
+            <div className="border-t border-slate-800 pt-6">
+              <button 
+                onClick={handleReset} 
+                disabled={playbackState === 'playing'}
+                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-widest font-semibold"
+              >
+                <RotateCcw className="w-4 h-4" /> Reset Environment
+              </button>
             </div>
           </div>
 
-          <div className="mt-auto border-t border-slate-800 pt-6">
-            <button 
-              onClick={handleReset} 
-              disabled={playbackState === 'playing'}
-              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-widest font-semibold mb-4"
-            >
-              <RotateCcw className="w-4 h-4" /> Reset Environment
-            </button>
+          <div className="flex-1 min-h-0 overflow-y-auto border-t border-slate-800 pt-6 mt-6">
+            <EducationalSection
+              activeNoteId={activeNoteId}
+              onSelectNote={setActiveNoteId}
+              onCloseNote={() => setActiveNoteId(null)}
+            />
           </div>
         </aside>
 
         {/* Visualization Area */}
-        <main className="col-span-6 bg-slate-950 flex flex-col overflow-hidden relative">
+        <main className="col-span-6 bg-slate-950 flex flex-col min-h-0 overflow-hidden relative">
           <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center z-10 shrink-0">
             <div>
                <h2 className="text-xl font-light text-white tracking-tight">Memory Visualization</h2>
@@ -290,17 +245,13 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto p-8 flex justify-center">
+          <div className="flex-1 min-h-0 overflow-auto p-8 flex justify-center">
             <HashVisualizer 
               algorithm={algorithm}
               table={table}
               activeTarget={activeTarget}
               status={status}
             />
-          </div>
-
-          <div className="border-t border-slate-800 shrink-0 bg-slate-900">
-             <EducationalSection />
           </div>
         </main>
 
