@@ -1,5 +1,14 @@
 # Hash Table Simulator
 
+![License: Educational Use Only](https://img.shields.io/badge/License-Educational%20Use%20Only-darkred)
+![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript 5](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Vite 6](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS 4](https://img.shields.io/badge/Tailwind%20CSS-4.x-06B6D4?logo=tailwindcss&logoColor=white)
+![Motion 12](https://img.shields.io/badge/Motion-12.x-111827)
+![Lucide React](https://img.shields.io/badge/Lucide-React-18181B)
+![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)
+
 Hash Table Simulator is an interactive, front-end educational simulator for learning how hash tables work.
 It visualizes insertion, searching, and deletion across three collision-resolution strategies:
 
