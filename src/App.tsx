@@ -27,9 +27,19 @@ export default function App() {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  useEffect(() => {
-    handleReset();
-  }, [algorithm, tableSize]);
+  const resetEnvironment = (nextSize: number, nextAlgorithm: Algorithm) => {
+    setAlgorithm(nextAlgorithm);
+    setTableSize(nextSize);
+    setTable(initializeTable(nextSize, nextAlgorithm));
+    setLogs([]);
+    setActiveTarget(null);
+    setStatus('idle');
+    setInputValue('');
+    setPlaybackState('idle');
+    setFrames([]);
+    setFrameIndex(0);
+    setActiveNoteId(null);
+  };
 
   // Main playback loop
   useEffect(() => {
@@ -55,15 +65,7 @@ export default function App() {
   }, [playbackState, frames, frameIndex]);
 
   const handleReset = () => {
-    setTable(initializeTable(tableSize, algorithm));
-    setLogs([]);
-    setActiveTarget(null);
-    setStatus('idle');
-    setInputValue('');
-    setPlaybackState('idle');
-    setFrames([]);
-    setFrameIndex(0);
-    setActiveNoteId(null);
+    resetEnvironment(tableSize, algorithm);
   };
 
   const addLog = (log: LogEntry) => {
@@ -131,7 +133,7 @@ export default function App() {
           {(['separate-chaining', 'linear-probing', 'double-hashing'] as Algorithm[]).map((alg) => (
             <button 
               key={alg}
-              onClick={() => setAlgorithm(alg)}
+              onClick={() => resetEnvironment(tableSize, alg)}
               disabled={playbackState !== 'idle'}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${algorithm === alg ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
@@ -159,7 +161,10 @@ export default function App() {
                   className="w-full accent-cyan-500" 
                   min="3" max="50" 
                   value={tableSize}
-                  onChange={(e) => setTableSize(Math.max(3, parseInt(e.target.value) || 10))}
+                  onChange={(e) => {
+                    const nextSize = Math.max(3, parseInt(e.target.value) || 10);
+                    resetEnvironment(nextSize, algorithm);
+                  }}
                   disabled={playbackState !== 'idle'}
                 />
               </div>

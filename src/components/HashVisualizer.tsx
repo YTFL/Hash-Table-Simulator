@@ -30,6 +30,7 @@ export function HashVisualizer({ algorithm, table, activeTarget, status }: Props
     return (
       <div className="flex flex-col space-y-3 w-full max-w-2xl overflow-x-auto pb-4">
         {chainTable.map((chain, idx) => {
+          const safeChain = Array.isArray(chain) ? chain : [];
           const isRowActive = activeTarget?.index === idx;
           const indexColor = isRowActive ? (status === 'error' ? 'text-rose-500' : 'text-cyan-500') : 'text-slate-600';
           
@@ -46,7 +47,7 @@ export function HashVisualizer({ algorithm, table, activeTarget, status }: Props
 
               {/* Chain */}
               <div className="flex items-center space-x-1 pl-1">
-                {chain.length === 0 ? (
+                {safeChain.length === 0 ? (
                   <div className={`
                     h-12 px-4 border-2 rounded flex items-center justify-center text-sm font-bold transition-colors
                     ${isRowActive ? getCellColor(true, 'empty') : 'bg-slate-800 border-slate-700 text-slate-400'}
@@ -55,10 +56,10 @@ export function HashVisualizer({ algorithm, table, activeTarget, status }: Props
                   </div>
                 ) : (
                   <AnimatePresence mode="popLayout">
-                    {chain.map((val, cIdx) => {
+                    {safeChain.map((val, cIdx) => {
                       const isCellActive = isRowActive && activeTarget?.chainIndex === cIdx;
                       return (
-                        <React.Fragment key={`${val}`}>
+                        <React.Fragment key={`${idx}-${val}-${cIdx}`}>
                           <motion.div
                             initial={{ opacity: 0, scale: 0.8, x: -10 }}
                             animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -77,7 +78,7 @@ export function HashVisualizer({ algorithm, table, activeTarget, status }: Props
                         </React.Fragment>
                       );
                     })}
-                    {chain.length > 0 && (
+                    {safeChain.length > 0 && (
                       <motion.div
                         key="chain-null"
                         layout
@@ -104,7 +105,15 @@ export function HashVisualizer({ algorithm, table, activeTarget, status }: Props
   const openTable = table as OpenAddressingCell[];
   return (
     <div className="w-full max-w-2xl flex flex-wrap gap-3">
-      {openTable.map((cell, idx) => {
+      {openTable.map((rawCell, idx) => {
+        const cell = (
+          rawCell &&
+          typeof rawCell === 'object' &&
+          'key' in rawCell &&
+          'deleted' in rawCell
+        )
+          ? (rawCell as OpenAddressingCell)
+          : ({ key: null, deleted: false } as OpenAddressingCell);
         const isActive = activeTarget?.index === idx;
         const type = cell.deleted ? 'deleted' : (cell.key === null ? 'empty' : 'filled');
         const isSelectedText = isActive ? (status === 'error' ? 'text-rose-500' : 'text-cyan-500') : 'text-slate-600';
