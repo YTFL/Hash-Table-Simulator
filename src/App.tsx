@@ -124,7 +124,7 @@ export default function App() {
           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center">
             <Hash className="w-5 h-5 text-slate-950" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">HashViz</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white">Hash Table Simulator</h1>
         </div>
         
         <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
