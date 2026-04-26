@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Hash } from 'lucide-react';
+import { RotateCcw, Hash, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Algorithm, TableState, AnimationFrame, LogEntry } from './lib/types';
 import { initializeTable, simulateOperation } from './lib/simulator';
@@ -20,6 +20,11 @@ export default function App() {
   const [frames, setFrames] = useState<AnimationFrame[]>([]);
   const [frameIndex, setFrameIndex] = useState(0);
   
+  // Simulation history for playback feature
+  const [history, setHistory] = useState<{type: 'insert' | 'search' | 'delete', value: number}[]>([]);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayIndex, setReplayIndex] = useState(-1);
+  
   const [inputValue, setInputValue] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +37,9 @@ export default function App() {
     setTableSize(nextSize);
     setTable(initializeTable(nextSize, nextAlgorithm));
     setLogs([]);
+    setHistory([]);
+    setIsReplaying(false);
+    setReplayIndex(-1);
     setActiveTarget(null);
     setStatus('idle');
     setInputValue('');
@@ -74,16 +82,36 @@ export default function App() {
 
   const finishExecution = () => {
     setPlaybackState('idle');
+    
+    // If replaying, check for next operation
+    if (isReplaying && replayIndex < history.length - 1) {
+      setTimeout(() => {
+        setReplayIndex(prev => prev + 1);
+      }, 1000); // Wait 1s between operations
+      return;
+    } else if (isReplaying) {
+      setIsReplaying(false);
+      setReplayIndex(-1);
+    }
+
     setTimeout(() => {
       setActiveTarget(null);
       setStatus('idle');
     }, 2000);
   };
 
-  const runOperation = (operation: 'insert' | 'search' | 'delete') => {
-    if (playbackState !== 'idle') return;
+  // Trigger next operation during replay
+  useEffect(() => {
+    if (isReplaying && replayIndex >= 0 && replayIndex < history.length) {
+      const op = history[replayIndex];
+      runOperation(op.type, op.value, true);
+    }
+  }, [replayIndex, isReplaying]);
+
+  const runOperation = (operation: 'insert' | 'search' | 'delete', manualValue?: number, fromReplay: boolean = false) => {
+    if (playbackState !== 'idle' && !fromReplay) return;
     
-    const val = parseInt(inputValue);
+    const val = manualValue ?? parseInt(inputValue);
     if (isNaN(val) || val < 0) {
       addLog({ id: `err-${Date.now()}-${Math.random()}`, text: 'Please enter a valid positive number.', type: 'warning' });
       return;
@@ -111,11 +139,31 @@ export default function App() {
 
     setInputValue('');
 
+    if (!fromReplay) {
+      setHistory(prev => [...prev, { type: operation, value: val }]);
+    }
+
     if (generatedFrames.length === 1) {
        finishExecution();
     } else {
        setPlaybackState('playing');
     }
+  };
+
+  const handlePlayback = () => {
+    if (history.length === 0 || playbackState !== 'idle') return;
+    
+    // Reset table state for playback but keep history
+    setTable(initializeTable(tableSize, algorithm));
+    setLogs([{ id: `replay-${Date.now()}`, text: '--- Starting Full Playback ---', type: 'info' }]);
+    setActiveTarget(null);
+    setStatus('idle');
+    setPlaybackState('idle');
+    setFrames([]);
+    setFrameIndex(0);
+    
+    setIsReplaying(true);
+    setReplayIndex(0);
   };
 
   return (
@@ -216,10 +264,17 @@ export default function App() {
               </div>
             </div>
 
-            <div className="border-t border-slate-800 pt-6">
+            <div className="border-t border-slate-800 pt-6 space-y-3">
+              <button 
+                onClick={handlePlayback}
+                disabled={playbackState !== 'idle' || history.length === 0 || isReplaying}
+                className="w-full flex items-center justify-center gap-2 bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-400 border border-cyan-600/30 rounded-lg py-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed text-xs uppercase tracking-widest font-semibold"
+              >
+                <Play className="w-4 h-4 fill-cyan-400" /> Playback Simulation
+              </button>
               <button 
                 onClick={handleReset} 
-                disabled={playbackState === 'playing'}
+                disabled={playbackState === 'playing' || isReplaying}
                 className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-widest font-semibold"
               >
                 <RotateCcw className="w-4 h-4" /> Reset Environment
