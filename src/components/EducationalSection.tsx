@@ -244,7 +244,7 @@ export function EducationalSection({ activeNoteId, onSelectNote, onCloseNote }: 
                 </button>
               </div>
 
-              <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
+              <div className="max-h-[70vh] overflow-y-auto px-5 py-4 custom-scrollbar">
                 <p className="text-sm leading-relaxed text-slate-300">{selectedSection.intro}</p>
                 <ul className="mt-4 space-y-3 text-sm leading-relaxed text-slate-200">
                   {selectedSection.points.map((point) => (

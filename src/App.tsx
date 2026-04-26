@@ -282,7 +282,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-slate-800 pt-6 mt-6">
+          <div className="flex-1 min-h-0 overflow-y-auto border-t border-slate-800 pt-6 mt-6 custom-scrollbar">
             <EducationalSection
               activeNoteId={activeNoteId}
               onSelectNote={setActiveNoteId}
@@ -305,7 +305,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 min-h-0 overflow-auto p-8 flex justify-center">
+          <div className="flex-1 min-h-0 overflow-auto p-8 flex justify-center custom-scrollbar">
             <HashVisualizer 
               algorithm={algorithm}
               table={table}
@@ -318,7 +318,7 @@ export default function App() {
         {/* Right: Log & Console */}
         <aside className="col-span-3 border-l border-slate-700 bg-slate-950 p-4 flex flex-col overflow-hidden">
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">Runtime Execution Log</label>
-          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-4 font-mono text-xs overflow-y-auto flex flex-col">
+          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-4 font-mono text-xs overflow-y-auto flex flex-col custom-scrollbar">
             <div className="space-y-3">
               <AnimatePresence initial={false}>
                 {logs.length === 0 && (
